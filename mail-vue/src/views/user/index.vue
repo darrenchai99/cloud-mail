@@ -1,114 +1,301 @@
 <template>
   <div class="user-box">
     <div class="header-actions">
-      <Icon class="icon" icon="ion:add-outline" width="23" height="23" @click="openAdd"/>
+      <Icon
+        class="icon"
+        icon="ion:add-outline"
+        width="23"
+        height="23"
+        @click="openAdd"
+      />
       <div class="search">
         <el-input
-            v-model="params.email"
-            class="search-input"
-            placeholder="输入邮箱名搜索"
+          v-model="params.email"
+          class="search-input"
+          placeholder="输入邮箱名搜索"
         >
         </el-input>
       </div>
-      <el-select v-model="params.status" placeholder="Select" class="status-select">
-        <el-option :key="-1" label="全部" :value="-1"/>
-        <el-option :key="0" label="正常" :value="0"/>
-        <el-option :key="1" label="封禁" :value="1"/>
-        <el-option :key="-2" label="删除" :value="-2"/>
+      <el-select
+        v-model="params.status"
+        placeholder="Select"
+        class="status-select"
+      >
+        <el-option :key="-1" label="全部" :value="-1" />
+        <el-option :key="0" label="正常" :value="0" />
+        <el-option :key="1" label="封禁" :value="1" />
+        <el-option :key="-2" label="删除" :value="-2" />
       </el-select>
-      <Icon class="icon" icon="iconoir:search" @click="search" width="20" height="20"/>
-      <Icon class="icon" @click="changeTimeSort" icon="material-symbols-light:timer-arrow-down-outline"
-            v-if="params.timeSort === 1" width="28" height="28"/>
-      <Icon class="icon" @click="changeTimeSort" icon="material-symbols-light:timer-arrow-up-outline" v-else width="28"
-            height="28"/>
-      <Icon class="icon" icon="ion:reload" width="18" height="18" @click="refresh"/>
-      <Icon class="icon" icon="pepicons-pencil:expand" width="26" height="26" @click="changeExpand"/>
+      <Icon
+        class="icon"
+        icon="iconoir:search"
+        @click="search"
+        width="20"
+        height="20"
+      />
+      <Icon
+        class="icon"
+        @click="changeTimeSort"
+        icon="material-symbols-light:timer-arrow-down-outline"
+        v-if="params.timeSort === 1"
+        width="28"
+        height="28"
+      />
+      <Icon
+        class="icon"
+        @click="changeTimeSort"
+        icon="material-symbols-light:timer-arrow-up-outline"
+        v-else
+        width="28"
+        height="28"
+      />
+      <Icon
+        class="icon"
+        icon="ion:reload"
+        width="18"
+        height="18"
+        @click="refresh"
+      />
+      <Icon
+        class="icon"
+        icon="pepicons-pencil:expand"
+        width="26"
+        height="26"
+        @click="changeExpand"
+      />
     </div>
     <el-scrollbar ref="scrollbarRef" class="scrollbar">
       <div>
-        <div class="loading" :class="tableLoading ? 'loading-show' : 'loading-hide'">
-          <loading/>
+        <div
+          class="loading"
+          :class="tableLoading ? 'loading-show' : 'loading-hide'"
+        >
+          <loading />
         </div>
         <el-table
-            @filter-change="tableFilter"
-            :empty-text="first ? '' : null"
-            :default-expand-all="expandStatus"
-            :data="users"
-            :preserve-expanded-content="preserveExpanded"
-            style="width: 100%;"
-            :key="key"
+          @filter-change="tableFilter"
+          :empty-text="first ? '' : null"
+          :default-expand-all="expandStatus"
+          :data="users"
+          :preserve-expanded-content="preserveExpanded"
+          style="width: 100%"
+          :key="key"
         >
           <el-table-column :width="expandWidth" type="expand">
             <template #default="props">
               <div class="details">
-                <div v-if="!sendNumShow"><span class="details-item-title">发件数量:</span>{{ props.row.sendEmailCount }}
+                <div v-if="!sendNumShow">
+                  <span class="details-item-title">发件数量:</span
+                  >{{ props.row.sendEmailCount }}
                 </div>
-                <div v-if="!accountNumShow"><span class="details-item-title">邮箱数量:</span>{{
-                    props.row.accountCount
+                <div v-if="!accountNumShow">
+                  <span class="details-item-title">邮箱数量:</span
+                  >{{ props.row.accountCount }}
+                </div>
+                <div v-if="!createTimeShow">
+                  <span class="details-item-title">注册时间:</span
+                  >{{
+                    tzDayjs(props.row.createTime).format("YYYY-MM-DD HH:mm:ss")
                   }}
                 </div>
-                <div v-if="!createTimeShow"><span class="details-item-title">注册时间:</span>{{
-                    tzDayjs(props.row.createTime).format('YYYY-MM-DD HH:mm:ss')
-                  }}
-                </div>
-                <div v-if="!typeShow"><span class="details-item-title">身份类型:</span> {{ toRoleName(props.row.type) }}
+                <div v-if="!typeShow">
+                  <span class="details-item-title">身份类型:</span>
+                  {{ toRoleName(props.row.type) }}
                 </div>
                 <div v-if="!statusShow">
                   <span class="details-item-title">状态:</span>
-                  <el-tag disable-transitions v-if="props.row.isDel === 1" type="info">删除</el-tag>
-                  <el-tag disable-transitions v-else-if="props.row.status === 0" type="primary">正常</el-tag>
-                  <el-tag disable-transitions v-else-if="props.row.status === 1" type="danger">封禁</el-tag>
+                  <el-tag
+                    disable-transitions
+                    v-if="props.row.isDel === 1"
+                    type="info"
+                    >删除</el-tag
+                  >
+                  <el-tag
+                    disable-transitions
+                    v-else-if="props.row.status === 0"
+                    type="primary"
+                    >正常</el-tag
+                  >
+                  <el-tag
+                    disable-transitions
+                    v-else-if="props.row.status === 1"
+                    type="danger"
+                    >封禁</el-tag
+                  >
                 </div>
-                <div><span class="details-item-title">注册IP:</span>{{ props.row.createIp || '未知' }}</div>
-                <div><span class="details-item-title">近期IP:</span>{{ props.row.activeIp || '未知' }}</div>
-                <div><span class="details-item-title">近期活动:</span>{{
-                    props.row.activeTime ? tzDayjs(props.row.activeTime).format('YYYY-MM-DD') : '未知'
+                <div>
+                  <span class="details-item-title">注册IP:</span
+                  >{{ props.row.createIp || "未知" }}
+                </div>
+                <div>
+                  <span class="details-item-title">近期IP:</span
+                  >{{ props.row.activeIp || "未知" }}
+                </div>
+                <div>
+                  <span class="details-item-title">近期活动:</span
+                  >{{
+                    props.row.activeTime
+                      ? tzDayjs(props.row.activeTime).format("YYYY-MM-DD")
+                      : "未知"
                   }}
                 </div>
-                <div><span class="details-item-title">登录设备:</span>{{ props.row.device || '未知' }}</div>
-                <div><span class="details-item-title">登录系统:</span>{{ props.row.os || '未知' }}</div>
-                <div><span class="details-item-title">登录浏览器:</span>{{ props.row.browser || '未知' }}</div>
+                <div>
+                  <span class="details-item-title">登录设备:</span
+                  >{{ props.row.device || "未知" }}
+                </div>
+                <div>
+                  <span class="details-item-title">登录系统:</span
+                  >{{ props.row.os || "未知" }}
+                </div>
+                <div>
+                  <span class="details-item-title">登录浏览器:</span
+                  >{{ props.row.browser || "未知" }}
+                </div>
                 <div>
                   <span class="details-item-title">发件次数:</span>
                   <span>{{ formatSendCount(props.row) }}</span>
-                  <el-tag style="margin-left: 10px" v-if="props.row.sendAction.hasPerm" >
+                  <el-tag
+                    style="margin-left: 10px"
+                    v-if="props.row.sendAction.hasPerm"
+                  >
                     {{ formatSendType(props.row) }}
                   </el-tag>
-                  <el-button size="small" style="margin-left: 10px"
-                             v-if="props.row.sendAction.hasPerm && props.row.sendAction.sendCount"
-                             @click="resetSendCount(props.row)" type="primary">重置
+                  <el-button
+                    size="small"
+                    style="margin-left: 10px"
+                    v-if="
+                      props.row.sendAction.hasPerm &&
+                      props.row.sendAction.sendCount
+                    "
+                    @click="resetSendCount(props.row)"
+                    type="primary"
+                    >重置
                   </el-button>
                 </div>
               </div>
             </template>
           </el-table-column>
-          <el-table-column show-overflow-tooltip :tooltip-formatter="tableRowFormatter" label="用户邮箱" :min-width="emailWidth">
+          <el-table-column
+            show-overflow-tooltip
+            :tooltip-formatter="tableRowFormatter"
+            label="用户邮箱"
+            :min-width="emailWidth"
+          >
             <template #default="props">
               <div class="email-row">{{ props.row.email }}</div>
             </template>
           </el-table-column>
-          <el-table-column :formatter="formatterReceive" label-class-name="receive" column-key="receive"
-                           :filtered-value="filteredValue" :filters="filters" :width="receiveWidth" label="收件数量"
-                           prop="receiveEmailCount"/>
-          <el-table-column :formatter="formatterSend" label-class-name="send" column-key="send"
-                           :filtered-value="filteredValue" :filters="filters" v-if="sendNumShow" label="发件数量"
-                           prop="sendEmailCount"/>
-          <el-table-column :formatter="formatterAccount" label-class-name="account" column-key="account"
-                           :filtered-value="filteredValue" :filters="filters" v-if="accountNumShow" label="邮箱数量"
-                           prop="accountCount"/>
-          <el-table-column v-if="createTimeShow" label="注册时间" min-width="160" prop="createTime">
+          <el-table-column
+            :formatter="formatterReceive"
+            label-class-name="receive"
+            column-key="receive"
+            :filtered-value="filteredValue"
+            :filters="filters"
+            :width="receiveWidth"
+            label="收件数量"
+            prop="receiveEmailCount"
+          />
+          <el-table-column
+            :formatter="formatterSend"
+            label-class-name="send"
+            column-key="send"
+            :filtered-value="filteredValue"
+            :filters="filters"
+            v-if="sendNumShow"
+            label="发件数量"
+            prop="sendEmailCount"
+          />
+          <el-table-column
+            :formatter="formatterAccount"
+            label-class-name="account"
+            column-key="account"
+            :filtered-value="filteredValue"
+            :filters="filters"
+            v-if="accountNumShow"
+            label="邮箱数量"
+            prop="accountCount"
+          />
+          <el-table-column
+            min-width="60px"
+            label="转发状态"
+            prop="EmailForward"
+          >
             <template #default="props">
-              {{ tzDayjs(props.row.createTime).format('YYYY-MM-DD HH:mm:ss') }}
+              <el-tag
+                disable-transitions
+                v-if="props.row.EmailForward === 0"
+                type="danger"
+                >关闭</el-tag
+              >
+              <el-tag
+                disable-transitions
+                v-else-if="props.row.EmailForward === 1"
+                type="success"
+                >开启</el-tag
+              >
             </template>
           </el-table-column>
-          <el-table-column v-if="statusShow" min-width="60px" label="状态" prop="status">
+
+          <el-table-column
+            label="转发地址"
+            prop="ForwardAddr"
+            width="230"
+            class-name="ellipsis-column"
+          />
+          <el-table-column
+            label="转发数量"
+            min-width="60px"
+            prop="ForwardAddr"
+            class-name="ellipsis-column"
+          >
             <template #default="props">
-              <el-tag disable-transitions v-if="props.row.isDel === 1" type="info">删除</el-tag>
-              <el-tag disable-transitions v-else-if="props.row.status === 0" type="primary">正常</el-tag>
-              <el-tag disable-transitions v-else-if="props.row.status === 1" type="danger">封禁</el-tag>
+              <span v-if="props.row.ForwardCount === -1">无限制</span>
+              <span v-else>{{ props.row.ForwardCount }}</span>
             </template>
           </el-table-column>
-          <el-table-column v-if="typeShow" label="身份类型" min-width="140" prop="type">
+          <el-table-column
+            v-if="createTimeShow"
+            label="注册时间"
+            min-width="160"
+            prop="createTime"
+          >
+            <template #default="props">
+              {{ tzDayjs(props.row.createTime).format("YYYY-MM-DD HH:mm:ss") }}
+            </template>
+          </el-table-column>
+          <el-table-column
+            v-if="statusShow"
+            min-width="60px"
+            label="状态"
+            prop="status"
+          >
+            <template #default="props">
+              <el-tag
+                disable-transitions
+                v-if="props.row.isDel === 1"
+                type="info"
+                >删除</el-tag
+              >
+              <el-tag
+                disable-transitions
+                v-else-if="props.row.status === 0"
+                type="primary"
+                >正常</el-tag
+              >
+              <el-tag
+                disable-transitions
+                v-else-if="props.row.status === 1"
+                type="danger"
+                >封禁</el-tag
+              >
+            </template>
+          </el-table-column>
+          <el-table-column
+            v-if="typeShow"
+            label="身份类型"
+            min-width="140"
+            prop="type"
+          >
             <template #default="props">
               <div class="type">
                 {{ toRoleName(props.row.type) }}
@@ -121,13 +308,27 @@
                 <el-button size="small" type="primary">操作</el-button>
                 <template #dropdown>
                   <el-dropdown-menu>
-                    <el-dropdown-item @click="openSetPwd(props.row)">改密</el-dropdown-item>
-                    <el-dropdown-item @click="openSetType(props.row)">权限</el-dropdown-item>
-                    <el-dropdown-item v-if="props.row.isDel !== 1" @click="setStatus(props.row)">
+                    <el-dropdown-item @click="openForword(props.row)"
+                      >转发</el-dropdown-item
+                    >
+                    <el-dropdown-item @click="openSetPwd(props.row)"
+                      >改密</el-dropdown-item
+                    >
+                    <el-dropdown-item @click="openSetType(props.row)"
+                      >权限</el-dropdown-item
+                    >
+                    <el-dropdown-item
+                      v-if="props.row.isDel !== 1"
+                      @click="setStatus(props.row)"
+                    >
                       {{ setStatusName(props.row) }}
                     </el-dropdown-item>
-                    <el-dropdown-item v-else @click="restore(props.row)">恢复</el-dropdown-item>
-                    <el-dropdown-item @click="delUser(props.row)">删除</el-dropdown-item>
+                    <el-dropdown-item v-else @click="restore(props.row)"
+                      >恢复</el-dropdown-item
+                    >
+                    <el-dropdown-item @click="delUser(props.row)"
+                      >删除</el-dropdown-item
+                    >
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
@@ -136,84 +337,194 @@
         </el-table>
         <div class="pagination" v-if="total > 10">
           <el-pagination
-              :size="pageSize"
-              :current-page="params.num"
-              :page-size="params.size"
-              :pager-count="pagerCount"
-              :page-sizes="[10, 15, 20, 25, 30, 50]"
-              background
-              :layout="layout"
-              :total="total"
-              @size-change="sizeChange"
-              @current-change="numChange"
+            :size="pageSize"
+            :current-page="params.num"
+            :page-size="params.size"
+            :pager-count="pagerCount"
+            :page-sizes="[10, 15, 20, 25, 30, 50]"
+            background
+            :layout="layout"
+            :total="total"
+            @size-change="sizeChange"
+            @current-change="numChange"
           />
           <el-pagination
-              v-if="phonePageShow"
-              :size="pageSize"
-              :current-page="params.num"
-              :page-size="params.size"
-              :pager-count="pagerCount"
-              :page-sizes="[10, 15, 20, 25, 30, 50]"
-              background
-              layout="sizes, total"
-              :total="total"
-              @size-change="sizeChange"
-              @current-change="numChange"
+            v-if="phonePageShow"
+            :size="pageSize"
+            :current-page="params.num"
+            :page-size="params.size"
+            :pager-count="pagerCount"
+            :page-sizes="[10, 15, 20, 25, 30, 50]"
+            background
+            layout="sizes, total"
+            :total="total"
+            @size-change="sizeChange"
+            @current-change="numChange"
           />
         </div>
       </div>
     </el-scrollbar>
-    <el-dialog class="dialog" v-model="setPwdShow" title="修改密码" @closed="resetUserForm">
-      <div class="dialog-box">
-        <el-input v-model="userForm.password" type="password" placeholder="密码" autocomplete="off">
-        </el-input>
-        <el-button class="btn" type="primary" :loading="settingLoading" @click="updatePwd"
-        >保存
+    <el-dialog
+      class="dialog-forword"
+      v-model="setForword"
+      title="邮件转发"
+      @closed="resetUserForm"
+    >
+      <div>
+        <el-form ref="form" :model="form" label-width="80px">
+          <el-form-item label="转发状态">
+            <el-select
+              v-model="userForm.emailForward"
+              placeholder="请选择转发状态"
+            >
+              <el-option
+                v-for="item in forword"
+                :label="item.label"
+                :value="item.value"
+                :key="item.value"
+              />
+            </el-select>
+          </el-form-item>
+
+          <el-form-item label="转发数量">
+            <el-radio-group v-model="userForm.forwordType">
+              <el-radio :label="0">无限制</el-radio>
+              <el-radio :label="1">自定义</el-radio>
+            </el-radio-group>
+            <el-input-number
+              v-if="userForm.forwordType === 1"
+              v-model="userForm.forwardCount"
+              controls-position="right"
+              :min="0"
+              :max="1000"
+              placeholder="每日转发数"
+            ></el-input-number>
+          </el-form-item>
+
+          <el-form-item label="目标邮箱">
+            <el-input
+              v-model="userForm.forwardAddr"
+              placeholder="请输入邮箱，多个邮箱使用;进行分割"
+            ></el-input>
+          </el-form-item>
+        </el-form>
+
+        <el-button
+          class="btn"
+          type="primary"
+          :loading="settingLoading"
+          @click="updateForwordEmail"
+          >保存
         </el-button>
       </div>
     </el-dialog>
-    <el-dialog class="dialog" v-model="setTypeShow" title="设置权限" @closed="resetUserForm">
+    <el-dialog
+      class="dialog"
+      v-model="setPwdShow"
+      title="修改密码"
+      @closed="resetUserForm"
+    >
       <div class="dialog-box">
-        <el-input disabled model-value="超级管理员" v-if="userForm.type === 0" />
-        <el-select v-else v-model="userForm.type" placeholder="Select" >
-          <el-option v-for="item in roleList" :label="item.name" :value="item.roleId" :key="item.roleId"/>
+        <el-input
+          v-model="userForm.password"
+          type="password"
+          placeholder="密码"
+          autocomplete="off"
+        >
+        </el-input>
+        <el-button
+          class="btn"
+          type="primary"
+          :loading="settingLoading"
+          @click="updatePwd"
+          >保存
+        </el-button>
+      </div>
+    </el-dialog>
+    <el-dialog
+      class="dialog"
+      v-model="setTypeShow"
+      title="设置权限"
+      @closed="resetUserForm"
+    >
+      <div class="dialog-box">
+        <el-input
+          disabled
+          model-value="超级管理员"
+          v-if="userForm.type === 0"
+        />
+        <el-select v-else v-model="userForm.type" placeholder="Select">
+          <el-option
+            v-for="item in roleList"
+            :label="item.name"
+            :value="item.roleId"
+            :key="item.roleId"
+          />
         </el-select>
-        <el-button :disabled="userForm.type === 0" class="btn" :loading="settingLoading" type="primary" @click="setType"
-        >保存
+        <el-button
+          :disabled="userForm.type === 0"
+          class="btn"
+          :loading="settingLoading"
+          type="primary"
+          @click="setType"
+          >保存
         </el-button>
       </div>
     </el-dialog>
     <el-dialog v-model="showAdd" title="添加用户">
       <div class="container">
-        <el-input v-model="addForm.email" type="text" placeholder="邮箱" autocomplete="off">
+        <el-input
+          v-model="addForm.email"
+          type="text"
+          placeholder="邮箱"
+          autocomplete="off"
+        >
           <template #append>
             <div @click.stop="openSelect">
               <el-select
-                  ref="mySelect"
-                  v-model="addForm.suffix"
-                  placeholder="请选择"
-                  class="select"
+                ref="mySelect"
+                v-model="addForm.suffix"
+                placeholder="请选择"
+                class="select"
               >
                 <el-option
-                    v-for="item in domainList"
-                    :key="item"
-                    :label="item"
-                    :value="item"
+                  v-for="item in domainList"
+                  :key="item"
+                  :label="item"
+                  :value="item"
                 />
               </el-select>
               <div style="color: #333">
                 <span>{{ addForm.suffix }}</span>
-                <Icon class="setting-icon" icon="mingcute:down-small-fill" width="20" height="20"/>
+                <Icon
+                  class="setting-icon"
+                  icon="mingcute:down-small-fill"
+                  width="20"
+                  height="20"
+                />
               </div>
             </div>
           </template>
         </el-input>
-        <el-input type="password" v-model="addForm.password" placeholder="密码"/>
+        <el-input
+          type="password"
+          v-model="addForm.password"
+          placeholder="密码"
+        />
         <el-select v-model="addForm.type" placeholder="身份类型">
-          <el-option v-for="item in roleList" :label="item.name" :value="item.roleId" :key="item.roleId"/>
+          <el-option
+            v-for="item in roleList"
+            :label="item.name"
+            :value="item.roleId"
+            :key="item.roleId"
+          />
         </el-select>
-        <el-button class="btn" type="primary" @click="submit" :loading="addLoading"
-        >添加
+        <el-button
+          class="btn"
+          type="primary"
+          @click="submit"
+          :loading="addLoading"
+          >添加
         </el-button>
       </div>
     </el-dialog>
@@ -221,534 +532,603 @@
 </template>
 
 <script setup>
-import {defineOptions, h, reactive, ref, watch} from 'vue'
+import loading from "@/components/loading/index.vue";
+import { roleSelectUse } from "@/request/role.js";
 import {
-  userList,
+  userAdd,
   userDelete,
+  userList,
+  userRestSendCount,
+  userRestore,
+  userSetForwordEmail,
   userSetPwd,
   userSetStatus,
   userSetType,
-  userAdd,
-  userRestSendCount, userRestore
-} from '@/request/user.js'
-import {roleSelectUse} from "@/request/role.js";
-import {Icon} from "@iconify/vue";
-import loading from "@/components/loading/index.vue";
-import {tzDayjs} from "@/utils/day.js";
-import {useSettingStore} from "@/store/setting.js";
-import {isEmail} from "@/utils/verify-utils.js";
-import {useRoleStore} from "@/store/role.js";
-import {useUserStore} from "@/store/user.js";
+} from "@/request/user.js";
+import { useRoleStore } from "@/store/role.js";
+import { useSettingStore } from "@/store/setting.js";
+import { useUserStore } from "@/store/user.js";
+import { tzDayjs } from "@/utils/day.js";
+import { isEmail } from "@/utils/verify-utils.js";
+import { Icon } from "@iconify/vue";
+import { defineOptions, h, reactive, ref, watch } from "vue";
 
 defineOptions({
-  name: 'user'
-})
+  name: "user",
+});
 
-const roleStore = useRoleStore()
-const userStore = useUserStore()
-const settingStore = useSettingStore()
-const filteredValue = ['normal', 'del']
-const filters = [{text: '正常', value: 'normal'}, {text: '删除', value: 'del'}]
-const preserveExpanded = ref(false)
-const emailWidth = ref(230)
-const expandWidth = ref(40)
-const settingWidth = ref(null)
-const sendNumShow = ref(true)
-const accountNumShow = ref(true)
-const createTimeShow = ref(true)
-const statusShow = ref(true)
-const typeShow = ref(true)
-const receiveWidth = ref(null)
-const phonePageShow = ref(false)
-const layout = ref('prev, pager, next,  sizes, total')
-const pageSize = ref('')
-const expandStatus = ref(false)
-const users = ref([])
-const total = ref(0)
-const first = ref(true)
-const scrollbarRef = ref(null)
+const roleStore = useRoleStore();
+const userStore = useUserStore();
+const settingStore = useSettingStore();
+const filteredValue = ["normal", "del"];
+const filters = [
+  { text: "正常", value: "normal" },
+  { text: "删除", value: "del" },
+];
 
-const domainList = settingStore.domainList
+const forword = [
+  {
+    label: "关闭",
+    value: 0,
+  },
+  {
+    label: "开启",
+    value: 1,
+  },
+];
+
+const preserveExpanded = ref(false);
+const emailWidth = ref(230);
+const expandWidth = ref(40);
+const settingWidth = ref(null);
+const sendNumShow = ref(true);
+const accountNumShow = ref(true);
+const createTimeShow = ref(true);
+const statusShow = ref(true);
+const typeShow = ref(true);
+const receiveWidth = ref(null);
+const phonePageShow = ref(false);
+const layout = ref("prev, pager, next,  sizes, total");
+const pageSize = ref("");
+const expandStatus = ref(false);
+const users = ref([]);
+const total = ref(0);
+const first = ref(true);
+const scrollbarRef = ref(null);
+
+const domainList = settingStore.domainList;
 
 const addForm = reactive({
-  email: '',
+  email: "",
   suffix: settingStore.domainList[0],
-  password: '',
+  password: "",
   type: null,
-})
+});
 
 const params = reactive({
-  email: '',
+  email: "",
   num: 1,
   size: 15,
   timeSort: 0,
-  status: -1
-})
-let chooseUser = {}
+  status: -1,
+});
+let chooseUser = {};
 const userForm = reactive({
   password: null,
   type: -1,
   userId: 0,
-})
+  emailForward: 0,
+  forwardAddr: null,
+  forwardCount: 0,
+  forwordType: 0,
+});
 
-const showAdd = ref(false)
+const showAdd = ref(false);
 const addLoading = ref(false);
-const setTypeShow = ref(false)
-const setPwdShow = ref(false)
-const pagerCount = ref(10)
-const settingLoading = ref(false)
-const tableLoading = ref(true)
-const roleList = reactive([])
-const mySelect = ref({})
-const key = ref(0)
+const setTypeShow = ref(false);
+const setPwdShow = ref(false);
+const setForword = ref(false);
+const pagerCount = ref(10);
+const settingLoading = ref(false);
+const tableLoading = ref(true);
+const roleList = reactive([]);
+const mySelect = ref({});
+const key = ref(0);
 
-roleSelectUse().then(list => {
-  roleList.length = 0
-  roleList.push(...list)
-})
+roleSelectUse().then((list) => {
+  roleList.length = 0;
+  roleList.push(...list);
+});
 
+watch(
+  () => roleStore.refresh,
+  () => {
+    roleSelectUse().then((list) => {
+      roleList.length = 0;
+      roleList.push(...list);
+    });
+  }
+);
 
-watch(() => roleStore.refresh, () => {
-  roleSelectUse().then(list => {
-    roleList.length = 0
-    roleList.push(...list)
-  })
-})
+watch(
+  () => userStore.refreshList,
+  () => {
+    getUserList(false);
+  }
+);
 
-watch(() => userStore.refreshList, () => {
-  getUserList(false)
-})
-
-getUserList()
+getUserList();
 
 const filterItem = reactive({
-  send: ['normal', 'del'],
-  account: ['normal', 'del'],
-  receive: ['normal', 'del']
-})
+  send: ["normal", "del"],
+  account: ["normal", "del"],
+  receive: ["normal", "del"],
+});
 
 function tableFilter(e) {
-
-  if (e.send) filterItem.send = e.send
-  if (e.account) filterItem.account = e.account
-  if (e.receive) filterItem.receive = e.receive
-
+  if (e.send) filterItem.send = e.send;
+  if (e.account) filterItem.account = e.account;
+  if (e.receive) filterItem.receive = e.receive;
 }
 
 function formatterSend(e) {
-
   if (filterItem.send.length === 2) {
-    return e.sendEmailCount + e.delSendEmailCount
+    return e.sendEmailCount + e.delSendEmailCount;
   }
 
-  if (filterItem.send.includes('normal')) {
-    return e.sendEmailCount
+  if (filterItem.send.includes("normal")) {
+    return e.sendEmailCount;
   }
 
-  if (filterItem.send.includes('del')) {
-    return e.delSendEmailCount
+  if (filterItem.send.includes("del")) {
+    return e.delSendEmailCount;
   }
 
-  return 0
+  return 0;
 }
 
 function formatterAccount(e) {
-
   if (filterItem.account.length === 2) {
-    return e.accountCount + e.delAccountCount
+    return e.accountCount + e.delAccountCount;
   }
 
-  if (filterItem.account.includes('normal')) {
-    return e.accountCount
+  if (filterItem.account.includes("normal")) {
+    return e.accountCount;
   }
 
-  if (filterItem.account.includes('del')) {
-    return e.delAccountCount
+  if (filterItem.account.includes("del")) {
+    return e.delAccountCount;
   }
 
-  return 0
+  return 0;
 }
 
 function formatterReceive(e) {
-
-
   if (filterItem.receive.length === 2) {
-    return e.receiveEmailCount + e.delReceiveEmailCount
+    return e.receiveEmailCount + e.delReceiveEmailCount;
   }
 
-  if (filterItem.receive.includes('normal')) {
-    return e.receiveEmailCount
+  if (filterItem.receive.includes("normal")) {
+    return e.receiveEmailCount;
   }
 
-  if (filterItem.receive.includes('del')) {
-    return e.delReceiveEmailCount
+  if (filterItem.receive.includes("del")) {
+    return e.delReceiveEmailCount;
   }
 
-  return 0
+  return 0;
 }
 
 function setStatusName(user) {
-  if (user.isDel === 1) return '恢复'
-  if (user.status === 0) return '禁用'
-  if (user.status === 1) return '启用'
+  if (user.isDel === 1) return "恢复";
+  if (user.status === 0) return "禁用";
+  if (user.status === 1) return "启用";
 }
 
 const tableRowFormatter = (data) => {
-  return data.row.email
-}
+  return data.row.email;
+};
 
 function changeExpand() {
-  expandStatus.value = !expandStatus.value
-  key.value++
+  expandStatus.value = !expandStatus.value;
+  key.value++;
 }
 
 const openSelect = () => {
-  mySelect.value.toggleMenu()
-}
+  mySelect.value.toggleMenu();
+};
 
 function resetAddForm() {
-  addForm.email = ''
-  addForm.suffix = settingStore.domainList[0]
-  addForm.type = null
-  addForm.password = ''
+  addForm.email = "";
+  addForm.suffix = settingStore.domainList[0];
+  addForm.type = null;
+  addForm.password = "";
 }
 
 function openAdd() {
-  showAdd.value = true
+  showAdd.value = true;
 }
 
 function submit() {
-
   if (!addForm.email) {
     ElMessage({
       message: "邮箱不能为空",
       type: "error",
-      plain: true
-    })
-    return
+      plain: true,
+    });
+    return;
   }
 
   if (!isEmail(addForm.email + addForm.suffix)) {
     ElMessage({
       message: "非法邮箱",
       type: "error",
-      plain: true
-    })
-    return
+      plain: true,
+    });
+    return;
   }
 
   if (!addForm.password) {
     ElMessage({
       message: "密码不能为空",
       type: "error",
-      plain: true
-    })
-    return
+      plain: true,
+    });
+    return;
   }
 
   if (addForm.password.length < 6) {
     ElMessage({
       message: "密码至少六位",
       type: "error",
-      plain: true
-    })
-    return
+      plain: true,
+    });
+    return;
   }
 
   if (!addForm.type) {
     ElMessage({
       message: "身份类型不能为空",
       type: "error",
-      plain: true
-    })
-    return
+      plain: true,
+    });
+    return;
   }
 
-  addLoading.value = true
-  const form = {...addForm}
-  form.email = form.email + form.suffix
-  userAdd(form).then(() => {
-    addLoading.value = false
-    showAdd.value = false
-    ElMessage({
-      message: "添加成功",
-      type: "success",
-      plain: true
+  addLoading.value = true;
+  const form = { ...addForm };
+  form.email = form.email + form.suffix;
+  userAdd(form)
+    .then(() => {
+      addLoading.value = false;
+      showAdd.value = false;
+      ElMessage({
+        message: "添加成功",
+        type: "success",
+        plain: true,
+      });
+      resetAddForm();
+      getUserList(false);
     })
-    resetAddForm()
-    getUserList(false)
-  }).finally(res => {
-    addLoading.value = false
-  })
+    .finally((res) => {
+      addLoading.value = false;
+    });
 }
 
-
 function formatSendType(user) {
-  if (user.sendAction.sendType === 'day') return '每天'
-  if (user.sendAction.sendType === 'count') return '总数'
+  if (user.sendAction.sendType === "day") return "每天";
+  if (user.sendAction.sendType === "count") return "总数";
 }
 
 function formatSendCount(user) {
-
   if (!user.sendAction.hasPerm) {
-    return '无权限'
+    return "无权限";
   }
 
   if (!user.sendAction.sendCount) {
-    return '无限制';
+    return "无限制";
   }
 
-  return user.sendCount + '/' + user.sendAction.sendCount + '次'
+  return user.sendCount + "/" + user.sendAction.sendCount + "次";
 }
 
 function toRoleName(type) {
-
   if (type === 0) {
-    return '超级管理员'
+    return "超级管理员";
   }
 
-  const index = roleList.findIndex(role => role.roleId === type)
+  const index = roleList.findIndex((role) => role.roleId === type);
   if (index > -1) {
-    return roleList[index].name
+    return roleList[index].name;
   }
-  return ""
+  return "";
 }
 
 function resetSendCount(user) {
-
   ElMessageBox.confirm(`确认重置${user.email}发件次数吗?`, {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning'
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    type: "warning",
   }).then(() => {
     userRestSendCount(user.userId).then(() => {
       ElMessage({
         message: "重置成功",
         type: "success",
-        plain: true
-      })
-      user.sendCount = 0
-    })
+        plain: true,
+      });
+      user.sendCount = 0;
+    });
   });
 }
 
 function delUser(user) {
   ElMessageBox.confirm(`确认删除${user.email}吗?`, {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning'
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    type: "warning",
   }).then(() => {
     userDelete(user.userId).then(() => {
       ElMessage({
         message: "删除成功",
         type: "success",
-        plain: true
-      })
-      getUserList(false)
-    })
+        plain: true,
+      });
+      getUserList(false);
+    });
   });
 }
 
 function restore(user) {
+  const type = ref(0);
 
-  const type = ref(0)
-
-  ElMessageBox.confirm( null, {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    message: () => h('div', [
-      h('div', { class: 'mb-2' }, `确认要恢复 ${user.email}`),
-      h(ElRadioGroup, {
-        modelValue: type.value,
-        'onUpdate:modelValue': (val) => (type.value = val),
-      }, [
-        h(ElRadio, { label: 'option1', value: 0 }, '普通恢复'),
-        h(ElRadio, { label: 'option2', value: 1 }, '包括已删除的数据'),
-      ])
-    ]),
-    type: 'warning'
+  ElMessageBox.confirm(null, {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    message: () =>
+      h("div", [
+        h("div", { class: "mb-2" }, `确认要恢复 ${user.email}`),
+        h(
+          ElRadioGroup,
+          {
+            modelValue: type.value,
+            "onUpdate:modelValue": (val) => (type.value = val),
+          },
+          [
+            h(ElRadio, { label: "option1", value: 0 }, "普通恢复"),
+            h(ElRadio, { label: "option2", value: 1 }, "包括已删除的数据"),
+          ]
+        ),
+      ]),
+    type: "warning",
   }).then(() => {
-    userRestore(user.userId,type.value).then(() => {
-      user.isDel = 0
+    userRestore(user.userId, type.value).then(() => {
+      user.isDel = 0;
       ElMessage({
         message: "恢复成功",
         type: "success",
-        plain: true
-      })
-    })
+        plain: true,
+      });
+    });
   });
 }
 
 function setStatus(user) {
-
   if (user.status === 0) {
     ElMessageBox.confirm(`确认禁用 ${user.email} 吗?`, {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
+      confirmButtonText: "确定",
+      cancelButtonText: "取消",
+      type: "warning",
     }).then(() => {
-      httpSetStatus(user)
+      httpSetStatus(user);
     });
   } else {
-    httpSetStatus(user)
+    httpSetStatus(user);
   }
 }
 
 function httpSetStatus(user) {
-  let status = user.status ? 0 : 1
-  userSetStatus({status: status, userId: user.userId}).then(() => {
-    user.status = status
+  let status = user.status ? 0 : 1;
+  userSetStatus({ status: status, userId: user.userId }).then(() => {
+    user.status = status;
     ElMessage({
       message: "设置成功",
       type: "success",
-      plain: true
-    })
-  })
+      plain: true,
+    });
+  });
 }
 
 function setType() {
-  settingLoading.value = true
-  userSetType({type: userForm.type, userId: userForm.userId}).then(() => {
-    chooseUser.type = userForm.type
-    setTypeShow.value = false
-    ElMessage({
-      message: "设置成功",
-      type: "success",
-      plain: true
+  settingLoading.value = true;
+  userSetType({ type: userForm.type, userId: userForm.userId })
+    .then(() => {
+      chooseUser.type = userForm.type;
+      setTypeShow.value = false;
+      ElMessage({
+        message: "设置成功",
+        type: "success",
+        plain: true,
+      });
     })
-
-  }).finally(() => {
-    settingLoading.value = false
-  })
+    .finally(() => {
+      settingLoading.value = false;
+    });
 }
 
-
 function resetUserForm() {
-  userForm.password = null
-  userForm.userId = 0
-  userForm.type = 0
+  userForm.password = null;
+  userForm.userId = 0;
+  userForm.type = 0;
 }
 
 function search() {
-  params.num = 1
-  getUserList()
+  params.num = 1;
+  getUserList();
 }
 
 function updatePwd() {
-
   if (!userForm.password) {
     ElMessage({
-      message: '密码不能为空',
-      type: 'error',
+      message: "密码不能为空",
+      type: "error",
       plain: true,
-    })
-    return
+    });
+    return;
   }
 
   if (userForm.password.length < 6) {
     ElMessage({
-      message: '密码最少六位',
-      type: 'error',
+      message: "密码最少六位",
+      type: "error",
       plain: true,
-    })
-    return
+    });
+    return;
   }
 
-  settingLoading.value = true
-  userSetPwd({password: userForm.password, userId: userForm.userId}).then(() => {
-    setPwdShow.value = false
-    ElMessage({
-      message: "设置成功",
-      type: "success",
-      plain: true
+  settingLoading.value = true;
+  userSetPwd({ password: userForm.password, userId: userForm.userId })
+    .then(() => {
+      setPwdShow.value = false;
+      ElMessage({
+        message: "设置成功",
+        type: "success",
+        plain: true,
+      });
     })
-  }).finally(() => {
-    settingLoading.value = false
+    .finally(() => {
+      settingLoading.value = false;
+    });
+}
+
+function updateForwordEmail() {
+  if (userForm.emailForward == 1 && userForm.forwardAddr == "") {
+    ElMessage({
+      message: "目标邮箱不能为空",
+      type: "error",
+      plain: true,
+    });
+    return;
+  }
+  let forwordCount = userForm.forwardCount;
+  if (userForm.forwordType == 0) {
+    forwordCount = -1;
+  }
+  settingLoading.value = true;
+  userSetForwordEmail({
+    emailForward: userForm.emailForward,
+    forwordCount: forwordCount,
+    forwardAddr: userForm.forwardAddr,
+    userId: userForm.userId,
   })
+    .then(() => {
+      setForword.value = false;
+      ElMessage({
+        message: "设置成功",
+        type: "success",
+        plain: true,
+      });
+      refresh();
+    })
+    .finally(() => {
+      settingLoading.value = false;
+    });
 }
 
 function openSetType(user) {
-  chooseUser = user
-  userForm.userId = user.userId
-  userForm.type = user.type
-  setTypeShow.value = true
+  chooseUser = user;
+  userForm.userId = user.userId;
+  userForm.type = user.type;
+  setTypeShow.value = true;
 }
 
 function openSetPwd(user) {
-  userForm.userId = user.userId
-  setPwdShow.value = true
+  userForm.userId = user.userId;
+  setPwdShow.value = true;
+}
+
+function openForword(user) {
+  userForm.userId = user.userId;
+  userForm.emailForward = user.EmailForward;
+  userForm.forwardAddr = user.ForwardAddr;
+  userForm.forwardCount = user.ForwardCount;
+  if (user.ForwardCount !== -1) {
+    userForm.forwordType = 1;
+  } else {
+    userForm.forwordType = 0;
+  }
+  setForword.value = true;
 }
 
 function refresh() {
-  params.email = ''
-  params.num = 1
-  params.status = -1
-  params.timeSort = 0
+  params.email = "";
+  params.num = 1;
+  params.status = -1;
+  params.timeSort = 0;
   getUserList();
-  roleSelectUse().then(list => {
-    roleList.length = 0
-    roleList.push(...list)
-  })
+  roleSelectUse().then((list) => {
+    roleList.length = 0;
+    roleList.push(...list);
+  });
 }
 
 function changeTimeSort() {
-  params.num = 1
-  params.timeSort = params.timeSort ? 0 : 1
-  getUserList()
+  params.num = 1;
+  params.timeSort = params.timeSort ? 0 : 1;
+  getUserList();
 }
 
 function numChange(num) {
-  params.num = num
-  getUserList()
+  params.num = num;
+  getUserList();
 }
 
 function sizeChange(size) {
-  params.size = size
-  getUserList()
+  params.size = size;
+  getUserList();
 }
 
 function getUserList(loading = true) {
-
-  tableLoading.value = loading
-  const newParams = {...params}
+  tableLoading.value = loading;
+  const newParams = { ...params };
 
   if (newParams.status === -2) {
-    delete newParams.status
-    newParams.isDel = 1
+    delete newParams.status;
+    newParams.isDel = 1;
   }
-  userList(newParams).then(data => {
-    users.value = data.list
-    total.value = data.total
-    scrollbarRef.value?.setScrollTop(0);
-  }).finally(() => {
-    tableLoading.value = false
-    first.value = false
-  })
+  userList(newParams)
+    .then((data) => {
+      users.value = data.list;
+      total.value = data.total;
+      scrollbarRef.value?.setScrollTop(0);
+    })
+    .finally(() => {
+      tableLoading.value = false;
+      first.value = false;
+    });
 }
 
 window.onresize = () => {
-  adjustWidth()
+  adjustWidth();
 };
 
-adjustWidth()
+adjustWidth();
 
 function adjustWidth() {
-  const width = window.innerWidth
-  statusShow.value = width > 1090
-  createTimeShow.value = width > 1200
-  accountNumShow.value = width > 650
-  sendNumShow.value = width > 685
-  typeShow.value = width > 767
-  emailWidth.value = width > 480 ? 230 : null
-  settingWidth.value = width < 480 ? 75 : null
-  expandWidth.value = width < 480 ? 25 : 40
-  pagerCount.value = width < 768 ? 7 : 11
-  receiveWidth.value = width < 480 ? 90 : null
-  layout.value = width < 768 ? 'pager' : 'prev, pager, next,sizes, total'
-  phonePageShow.value = width < 768
-  pageSize.value = width < 380 ? 'small' : ''
+  const width = window.innerWidth;
+  statusShow.value = width > 1090;
+  createTimeShow.value = width > 1200;
+  accountNumShow.value = width > 650;
+  sendNumShow.value = width > 685;
+  typeShow.value = width > 767;
+  emailWidth.value = width > 480 ? 230 : null;
+  settingWidth.value = width < 480 ? 75 : null;
+  expandWidth.value = width < 480 ? 25 : 40;
+  pagerCount.value = width < 768 ? 7 : 11;
+  receiveWidth.value = width < 480 ? 90 : null;
+  layout.value = width < 768 ? "pager" : "prev, pager, next,sizes, total";
+  phonePageShow.value = width < 768;
+  pageSize.value = width < 380 ? "small" : "";
 }
-
 </script>
 
 <style>
@@ -771,7 +1151,6 @@ function adjustWidth() {
 }
 </style>
 <style lang="scss" scoped>
-
 .user-box {
   overflow: hidden;
   height: 100%;
@@ -827,7 +1206,7 @@ function adjustWidth() {
 }
 
 .choose-star {
-  color: var(--el-color-primary)
+  color: var(--el-color-primary);
 }
 
 .scrollbar {
@@ -872,7 +1251,6 @@ function adjustWidth() {
   }
 }
 
-
 .email-row {
   white-space: nowrap;
   overflow: hidden;
@@ -888,6 +1266,16 @@ function adjustWidth() {
 }
 
 .dialog {
+  .dialog-box {
+    .el-button {
+      width: 100%;
+      margin-top: 15px;
+    }
+  }
+}
+
+.dialog-forword {
+  width: 1000px;
   .dialog-box {
     .el-button {
       width: 100%;
@@ -933,20 +1321,19 @@ function adjustWidth() {
   top: 6px;
 }
 
-
 .btn {
   width: 100%;
 }
 
 :deep(.el-pagination .el-select) {
   width: 100px;
-  background: #FFF;
+  background: #fff;
 }
 
 :deep(.el-input-group__append) {
   padding: 0 !important;
   padding-left: 8px !important;
-  background: #FFFFFF;
+  background: #ffffff;
 }
 
 :deep(.el-dialog) {
@@ -976,7 +1363,7 @@ function adjustWidth() {
   white-space: nowrap;
 }
 
-:deep(.el-table th.el-table__cell>.cell.highlight) {
+:deep(.el-table th.el-table__cell > .cell.highlight) {
   color: #909399;
 }
 

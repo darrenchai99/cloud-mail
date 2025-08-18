@@ -1,7 +1,7 @@
 import app from '../hono/hono';
-import userService from '../service/user-service';
 import result from '../model/result';
 import userContext from '../security/user-context';
+import userService from '../service/user-service';
 
 app.delete('/user/delete', async (c) => {
 	await userService.physicsDelete(c, c.req.query());
@@ -40,5 +40,10 @@ app.put('/user/resetSendCount', async (c) => {
 
 app.put('/user/restore', async (c) => {
 	await userService.restore(c, await c.req.json());
+	return c.json(result.ok());
+});
+
+app.put('/user/setForwordEmail', async (c) => {
+	await userService.setForwordEmail(c, await c.req.json());
 	return c.json(result.ok());
 });

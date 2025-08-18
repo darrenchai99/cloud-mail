@@ -1,26 +1,24 @@
-import orm from '../entity/orm';
+import dayjs from 'dayjs';
+import { and, asc, count, desc, eq, gt, inArray, lt, lte, ne, or, sql } from 'drizzle-orm';
+import { parseHTML } from 'linkedom';
+import { Resend } from 'resend';
+import { attConst, emailConst, isDel, settingConst } from '../const/entity-const';
+import kvConst from '../const/kv-const';
 import email from '../entity/email';
-import { emailConst, isDel, settingConst } from '../const/entity-const';
-import { and, desc, eq, gt, inArray, lt, count, asc, sql, ne, or } from 'drizzle-orm';
+import orm from '../entity/orm';
 import { star } from '../entity/star';
-import settingService from './setting-service';
-import accountService from './account-service';
+import user from '../entity/user';
 import BizError from '../error/biz-error';
 import emailUtils from '../utils/email-utils';
-import { Resend } from 'resend';
+import accountService from './account-service';
 import attService from './att-service';
-import { parseHTML } from 'linkedom';
-import userService from './user-service';
 import roleService from './role-service';
-import user from '../entity/user';
+import settingService from './setting-service';
 import starService from './star-service';
-import dayjs from 'dayjs';
-import kvConst from '../const/kv-const';
+import userService from './user-service';
 
 const emailService = {
-
 	async list(c, params, userId) {
-
 		let { emailId, type, accountId, size, timeSort } = params;
 
 		size = Number(size);
@@ -32,37 +30,28 @@ const emailService = {
 		}
 
 		if (!emailId) {
-
 			if (timeSort) {
 				emailId = 0;
 			} else {
 				emailId = 9999999999;
 			}
-
 		}
-
 
 		const query = orm(c)
 			.select({
 				...email,
-				starId: star.starId
+				starId: star.starId,
 			})
 			.from(email)
-			.leftJoin(
-				star,
-				and(
-					eq(star.emailId, email.emailId),
-					eq(star.userId, userId)
-				)
-			)
+			.leftJoin(star, and(eq(star.emailId, email.emailId), eq(star.userId, userId)))
 			.where(
 				and(
 					timeSort ? gt(email.emailId, emailId) : lt(email.emailId, emailId),
 					eq(email.accountId, accountId),
 					eq(email.userId, userId),
 					eq(email.type, type),
-					eq(email.isDel, isDel.NORMAL)
-				)
+					eq(email.isDel, isDel.NORMAL),
+				),
 			);
 
 		if (timeSort) {
@@ -73,37 +62,33 @@ const emailService = {
 
 		const listQuery = query.limit(size).all();
 
-		const totalQuery = orm(c).select({ total: count() }).from(email).where(
-			and(
-				eq(email.accountId, accountId),
-				eq(email.userId, userId),
-				eq(email.type, type),
-				eq(email.isDel, isDel.NORMAL)
-			)
-		).get();
+		const totalQuery = orm(c)
+			.select({ total: count() })
+			.from(email)
+			.where(and(eq(email.accountId, accountId), eq(email.userId, userId), eq(email.type, type), eq(email.isDel, isDel.NORMAL)))
+			.get();
 
-		const latestEmailQuery = orm(c).select().from(email).where(
-			and(
-				eq(email.accountId, accountId),
-				eq(email.userId, userId),
-				eq(email.type, type),
-				eq(email.isDel, isDel.NORMAL)
-			))
-			.orderBy(desc(email.emailId)).limit(1).get();
+		const latestEmailQuery = orm(c)
+			.select()
+			.from(email)
+			.where(and(eq(email.accountId, accountId), eq(email.userId, userId), eq(email.type, type), eq(email.isDel, isDel.NORMAL)))
+			.orderBy(desc(email.emailId))
+			.limit(1)
+			.get();
 
 		let [list, totalRow, latestEmail] = await Promise.all([listQuery, totalQuery, latestEmailQuery]);
 
-		list = list.map(item => ({
+		list = list.map((item) => ({
 			...item,
-			isStar: item.starId != null ? 1 : 0
+			isStar: item.starId != null ? 1 : 0,
 		}));
 
-		const emailIds = list.map(item => item.emailId);
+		const emailIds = list.map((item) => item.emailId);
 
 		const attsList = await attService.selectByEmailIds(c, emailIds);
 
-		list.forEach(emailRow => {
-			const atts = attsList.filter(attsRow => attsRow.emailId === emailRow.emailId);
+		list.forEach((emailRow) => {
+			const atts = attsList.filter((attsRow) => attsRow.emailId === emailRow.emailId);
 			emailRow.attList = atts;
 		});
 
@@ -113,45 +98,28 @@ const emailService = {
 	async delete(c, params, userId) {
 		const { emailIds } = params;
 		const emailIdList = emailIds.split(',').map(Number);
-		await orm(c).update(email).set({ isDel: isDel.DELETE }).where(
-			and(
-				eq(email.userId, userId),
-				inArray(email.emailId, emailIdList)))
+		await orm(c)
+			.update(email)
+			.set({ isDel: isDel.DELETE })
+			.where(and(eq(email.userId, userId), inArray(email.emailId, emailIdList)))
 			.run();
 	},
 
-	receive(c, params, cidAttList) {
-
-		const { document } = parseHTML(params.content);
-
-		const images = Array.from(document.querySelectorAll('img'));
-
-		for (const img of images) {
-
-			const src = img.getAttribute('src');
-			if (src && src.startsWith('cid:')) {
-
-				const cid = src.replace(/^cid:/, '');
-				const attCidIndex = cidAttList.findIndex(cidAtt => cidAtt.contentId.replace(/^<|>$/g, '') === cid);
-
-				if (attCidIndex > -1) {
-					const cidAtt = cidAttList[attCidIndex];
-					img.setAttribute('src', '{{domain}}' + cidAtt.key);
-				}
-			}
-		}
-
-		params.content = document.toString();
-		return orm(c).insert(email).values({ ...params }).returning().get();
+	receive(c, params, cidAttList, r2domain) {
+		params.content = this.imgReplace(params.content, cidAttList, r2domain);
+		return orm(c)
+			.insert(email)
+			.values({ ...params })
+			.returning()
+			.get();
 	},
 
 	async send(c, params, userId) {
-
 		let { accountId, name, sendType, emailId, receiveEmail, manyType, text, content, subject, attachments } = params;
 
 		const { resendTokens, r2Domain, send } = await settingService.query(c);
 
-		const { attDataList, html } = await attService.toImageUrlHtml(c, content, r2Domain);
+		let { attDataList, html } = await attService.toImageUrlHtml(c, content, r2Domain);
 
 		if (attDataList.length > 0 && !r2Domain) {
 			throw new BizError('r2域名未配置不能发送正文图片');
@@ -177,12 +145,10 @@ const emailService = {
 			throw new BizError('分别发送暂时不支持附件');
 		}
 
-
 		const userRow = await userService.selectById(c, userId);
 		const roleRow = await roleService.selectById(c, userRow.type);
 
 		if (c.env.admin !== userRow.email && roleRow.sendCount) {
-
 			if (userRow.sendCount >= roleRow.sendCount) {
 				if (roleRow.sendType === 'day') throw new BizError('已到达每日发送次数限制', 403);
 				if (roleRow.sendType === 'count') throw new BizError('已到达发送次数限制', 403);
@@ -192,9 +158,7 @@ const emailService = {
 				if (roleRow.sendType === 'day') throw new BizError('剩余每日发送次数不足', 403);
 				if (roleRow.sendType === 'count') throw new BizError('剩余发送次数不足', 403);
 			}
-
 		}
-
 
 		const accountRow = await accountService.selectById(c, accountId);
 
@@ -216,19 +180,16 @@ const emailService = {
 			name = emailUtils.getName(accountRow.email);
 		}
 
-
 		let emailRow = {
-			messageId: null
+			messageId: null,
 		};
 
 		if (sendType === 'reply') {
-
 			emailRow = await this.selectById(c, emailId);
 
 			if (!emailRow) {
 				throw new BizError('邮件不存在无法回复');
 			}
-
 		}
 
 		let resendResult = null;
@@ -236,22 +197,21 @@ const emailService = {
 		const resend = new Resend(resendToken);
 
 		if (manyType === 'divide') {
-
 			let sendFormList = [];
 
-			receiveEmail.forEach(email => {
+			receiveEmail.forEach((email) => {
 				const sendForm = {
 					from: `${name} <${accountRow.email}>`,
 					to: [email],
 					subject: subject,
 					text: text,
-					html: html
+					html: html,
 				};
 
 				if (sendType === 'reply') {
 					sendForm.headers = {
 						'in-reply-to': emailRow.messageId,
-						'references': emailRow.messageId
+						references: emailRow.messageId,
 					};
 				}
 
@@ -259,37 +219,34 @@ const emailService = {
 			});
 
 			resendResult = await resend.batch.send(sendFormList);
-
 		} else {
-
 			const sendForm = {
 				from: `${name} <${accountRow.email}>`,
 				to: [...receiveEmail],
 				subject: subject,
 				text: text,
 				html: html,
-				attachments: attachments
+				attachments: attachments,
 			};
 
 			if (sendType === 'reply') {
 				sendForm.headers = {
 					'in-reply-to': emailRow.messageId,
-					'references': emailRow.messageId
+					references: emailRow.messageId,
 				};
 			}
 
 			resendResult = await resend.emails.send(sendForm);
-
 		}
 
 		const { data, error } = resendResult;
-
 
 		if (error) {
 			console.error(error);
 			throw new BizError(error.message);
 		}
 
+		html = this.imgReplace(html, null, r2Domain);
 
 		const emailData = {};
 		emailData.sendEmail = accountRow.email;
@@ -305,21 +262,18 @@ const emailService = {
 		const emailDataList = [];
 
 		if (manyType === 'divide') {
-
 			receiveEmail.forEach((item, index) => {
 				const emailDataItem = { ...emailData };
 				emailDataItem.resendEmailId = data.data[index].id;
 				emailDataItem.recipient = JSON.stringify([{ address: item, name: '' }]);
 				emailDataList.push(emailDataItem);
 			});
-
 		} else {
-
 			emailData.resendEmailId = data.id;
 
 			const recipient = [];
 
-			receiveEmail.forEach(item => {
+			receiveEmail.forEach((item) => {
 				recipient.push({ address: item, name: '' });
 			});
 
@@ -329,12 +283,11 @@ const emailService = {
 		}
 
 		if (sendType === 'reply') {
-			emailDataList.forEach(emailData => {
+			emailDataList.forEach((emailData) => {
 				emailData.inReplyTo = emailRow.messageId;
 				emailData.relation = emailRow.messageId;
 			});
 		}
-
 
 		if (roleRow.sendCount) {
 			await userService.incrUserSendCount(c, receiveEmail.length, userId);
@@ -356,7 +309,7 @@ const emailService = {
 				emailRow.attList = attsList;
 
 				return emailRow;
-			})
+			}),
 		);
 
 		const dateStr = dayjs().format('YYYY-MM-DD');
@@ -365,42 +318,82 @@ const emailService = {
 
 		if (!daySendTotal) {
 			await c.env.kv.put(kvConst.SEND_DAY_COUNT + dateStr, JSON.stringify(receiveEmail.length), { expirationTtl: 60 * 60 * 24 });
-		} else  {
-			daySendTotal = Number(daySendTotal) + receiveEmail.length
+		} else {
+			daySendTotal = Number(daySendTotal) + receiveEmail.length;
 			await c.env.kv.put(kvConst.SEND_DAY_COUNT + dateStr, JSON.stringify(daySendTotal), { expirationTtl: 60 * 60 * 24 });
 		}
 
 		return emailRowList;
 	},
 
+	imgReplace(content, cidAttList, r2domain) {
+		if (!content) {
+			return '';
+		}
+
+		const { document } = parseHTML(content);
+
+		const images = Array.from(document.querySelectorAll('img'));
+
+		const useAtts = [];
+
+		for (const img of images) {
+			const src = img.getAttribute('src');
+			if (src && src.startsWith('cid:') && cidAttList) {
+				const cid = src.replace(/^cid:/, '');
+				const attCidIndex = cidAttList.findIndex((cidAtt) => cidAtt.contentId.replace(/^<|>$/g, '') === cid);
+
+				if (attCidIndex > -1) {
+					const cidAtt = cidAttList[attCidIndex];
+					img.setAttribute('src', '{{domain}}' + cidAtt.key);
+					useAtts.push(cidAtt);
+				}
+			}
+
+			if (src && src.startsWith(r2domain + '/')) {
+				img.setAttribute('src', src.replace(r2domain + '/', '{{domain}}'));
+			}
+		}
+
+		useAtts.forEach((att) => {
+			att.type = attConst.type.EMBED;
+		});
+
+		return document.toString();
+	},
+
 	selectById(c, emailId) {
-		return orm(c).select().from(email).where(
-			and(eq(email.emailId, emailId),
-				eq(email.isDel, isDel.NORMAL)))
+		return orm(c)
+			.select()
+			.from(email)
+			.where(and(eq(email.emailId, emailId), eq(email.isDel, isDel.NORMAL)))
 			.get();
 	},
 
 	async latest(c, params, userId) {
 		let { emailId, accountId } = params;
-		const list = await orm(c).select().from(email).where(
-			and(
-				eq(email.userId, userId),
-				eq(email.isDel, isDel.NORMAL),
-				eq(email.accountId, accountId),
-				eq(email.type, emailConst.type.RECEIVE),
-				gt(email.emailId, emailId)
-			))
+		const list = await orm(c)
+			.select()
+			.from(email)
+			.where(
+				and(
+					eq(email.userId, userId),
+					eq(email.isDel, isDel.NORMAL),
+					eq(email.accountId, accountId),
+					eq(email.type, emailConst.type.RECEIVE),
+					gt(email.emailId, emailId),
+				),
+			)
 			.orderBy(desc(email.emailId))
 			.limit(20);
 
-		const emailIds = list.map(item => item.emailId);
+		const emailIds = list.map((item) => item.emailId);
 
 		if (emailIds.length > 0) {
-
 			const attsList = await attService.selectByEmailIds(c, emailIds);
 
-			list.forEach(emailRow => {
-				const atts = attsList.filter(attsRow => attsRow.emailId === emailRow.emailId);
+			list.forEach((emailRow) => {
+				const atts = attsList.filter((attsRow) => attsRow.emailId === emailRow.emailId);
 				emailRow.attList = atts;
 			});
 		}
@@ -408,13 +401,12 @@ const emailService = {
 		return list;
 	},
 
-
 	async physicsDeleteAll(c) {
 		const emailIdsRow = await orm(c).select({ emailId: email.emailId }).from(email).where(eq(email.isDel, isDel.DELETE)).limit(99);
 		if (emailIdsRow.length === 0) {
 			return;
 		}
-		const emailIds = emailIdsRow.map(row => row.emailId);
+		const emailIds = emailIdsRow.map((row) => row.emailId);
 		await attService.removeByEmailIds(c, emailIds);
 		await starService.removeByEmailIds(c, emailIds);
 		await orm(c).delete(email).where(inArray(email.emailId, emailIds)).run();
@@ -443,30 +435,30 @@ const emailService = {
 
 	updateEmailStatus(c, params) {
 		const { status, resendEmailId, message } = params;
-		return orm(c).update(email).set({
-			status: status,
-			message: message
-		}).where(eq(email.resendEmailId, resendEmailId)).returning().get();
+		return orm(c)
+			.update(email)
+			.set({
+				status: status,
+				message: message,
+			})
+			.where(eq(email.resendEmailId, resendEmailId))
+			.returning()
+			.get();
 	},
 
 	async selectUserEmailCountList(c, userIds, type, del = isDel.NORMAL) {
 		const result = await orm(c)
 			.select({
 				userId: email.userId,
-				count: count(email.emailId)
+				count: count(email.emailId),
 			})
 			.from(email)
-			.where(and(
-				inArray(email.userId, userIds),
-				eq(email.type, type),
-				eq(email.isDel, del)
-			))
+			.where(and(inArray(email.userId, userIds), eq(email.type, type), eq(email.isDel, del)))
 			.groupBy(email.userId);
 		return result;
 	},
 
 	async allList(c, params) {
-
 		let { emailId, size, name, subject, accountEmail, sendEmail, userEmail, type, timeSort } = params;
 
 		size = Number(size);
@@ -479,17 +471,14 @@ const emailService = {
 		}
 
 		if (!emailId) {
-
 			if (timeSort) {
 				emailId = 0;
 			} else {
 				emailId = 9999999999;
 			}
-
 		}
 
 		const conditions = [];
-
 
 		if (type === 'send') {
 			conditions.push(eq(email.type, emailConst.type.SEND));
@@ -516,8 +505,8 @@ const emailService = {
 				or(
 					sql`${email.toEmail} COLLATE NOCASE LIKE ${accountEmail + '%'}`,
 					sql`${email.sendEmail} COLLATE NOCASE LIKE ${accountEmail + '%'}`,
-				)
-			)
+				),
+			);
 		}
 
 		if (name) {
@@ -538,12 +527,14 @@ const emailService = {
 			conditions.push(lt(email.emailId, emailId));
 		}
 
-		const query = orm(c).select({ ...email, userEmail: user.email })
+		const query = orm(c)
+			.select({ ...email, userEmail: user.email })
 			.from(email)
 			.leftJoin(user, eq(email.userId, user.userId))
 			.where(and(...conditions));
 
-		const queryCount = orm(c).select({ total: count() })
+		const queryCount = orm(c)
+			.select({ total: count() })
 			.from(email)
 			.leftJoin(user, eq(email.userId, user.userId))
 			.where(and(...countConditions));
@@ -559,11 +550,11 @@ const emailService = {
 
 		const [list, totalRow] = await Promise.all([listQuery, totalQuery]);
 
-		const emailIds = list.map(item => item.emailId);
+		const emailIds = list.map((item) => item.emailId);
 		const attsList = await attService.selectByEmailIds(c, emailIds);
 
-		list.forEach(emailRow => {
-			const atts = attsList.filter(attsRow => attsRow.emailId === emailRow.emailId);
+		list.forEach((emailRow) => {
+			const atts = attsList.filter((attsRow) => attsRow.emailId === emailRow.emailId);
 			emailRow.attList = atts;
 		});
 
@@ -575,11 +566,35 @@ const emailService = {
 	},
 
 	async completeReceive(c, status, emailId) {
-		return await orm(c).update(email).set({
-			isDel: isDel.NORMAL,
-			status: status
-		}).where(eq(email.emailId, emailId)).returning().get();
-	}
+		return await orm(c)
+			.update(email)
+			.set({
+				isDel: isDel.NORMAL,
+				status: status,
+			})
+			.where(eq(email.emailId, emailId))
+			.returning()
+			.get();
+	},
+
+	async deleteEmailForCron(c) {
+		const time = getDaysAgo(7);
+		return await orm(c).delete(email).where(lte(email.createTime, time)).run();
+	},
 };
+
+function getDaysAgo(days) {
+	const now = new Date();
+	const target = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+
+	const y = target.getFullYear();
+	const m = String(target.getMonth() + 1).padStart(2, '0');
+	const d = String(target.getDate()).padStart(2, '0');
+	const h = String(target.getHours()).padStart(2, '0');
+	const min = String(target.getMinutes()).padStart(2, '0');
+	const s = String(target.getSeconds()).padStart(2, '0');
+
+	return `${y}-${m}-${d} ${h}:${min}:${s}`;
+}
 
 export default emailService;

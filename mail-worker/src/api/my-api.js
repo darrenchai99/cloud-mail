@@ -1,7 +1,7 @@
 import app from '../hono/hono';
-import userService from '../service/user-service';
 import result from '../model/result';
 import userContext from '../security/user-context';
+import userService from '../service/user-service';
 
 app.get('/my/loginUserInfo', async (c) => {
 	const user = await userService.loginUserInfo(c, userContext.getUserId(c));
@@ -18,4 +18,8 @@ app.delete('/my/delete', async (c) => {
 	return c.json(result.ok());
 });
 
-
+app.put('/my/updateForwordEmail', async (c) => {
+	const params = await c.req.json();
+	await userService.setForwordEmailByUser(c, params.emailForward, params.forwardAddr, userContext.getUserId(c));
+	return c.json(result.ok());
+});
