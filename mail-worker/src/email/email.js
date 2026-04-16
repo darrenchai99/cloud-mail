@@ -16,6 +16,7 @@ import fileUtils from '../utils/file-utils';
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 export async function email(message, env, ctx) {
 	try {
 		const { receive, tgBotToken, tgChatId, tgBotStatus, forwardStatus, forwardEmail, ruleEmail, ruleType, r2Domain } =
@@ -157,17 +158,27 @@ ${params.text || emailUtils.htmlToText(params.content) || ''}
 					if (userInfo.ForwardAddr != '') {
 						const fowardAddrList = userInfo.ForwardAddr.split(';');
 						if (userInfo.ToadyForwardCount + fowardAddrList.length <= userInfo.ForwardCount || userInfo.ForwardCount == -1) {
-							const sendForm = {
-								from: account.email,
-								to: [...fowardAddrList],
-								subject: email.subject,
-								text: email.text,
-								html: email.html,
-								attachments: email.attachments,
-							};
-							const resend = new Resend(resendToken);
-							const resendResult = await resend.emails.send(sendForm);
-							await userService.incrUserForwordCount({ env }, fowardAddrList.length, params.userId);
+		                    // 逐个发送邮件给每个收件人
+		                    for (const forwardAddr of fowardAddrList) {
+		                        const sendForm = {
+		                            from: `"${email.from.address}" <${account.email}>`,
+		                            to: [forwardAddr],  // 每次发送给一个收件人
+		                            subject: `${email.subject} (From By ${email.from.address} To ${forwardAddr})`, // Update
+		                            text: email.text,
+		                            html: email.html,
+		                            attachments: email.attachments,
+		                        };
+		
+		                        const resend = new Resend(resendToken);
+		                        try {
+		                            const resendResult = await resend.emails.send(sendForm);
+		                            console.log(`Email sent to ${forwardAddr} successfully:`, resendResult);
+		                        } catch (error) {
+		                            console.error(`Error sending email to ${forwardAddr}:`, error);
+		                        }
+								await sleep(500);  // 等待500毫秒
+							}
+		                    // 更新转发次数
 						}
 					}
 				}
